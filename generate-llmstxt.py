@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Generate llms.txt and llms-full.txt files for a website using Firecrawl and OpenAI.
+Generate llms.txt and llms-full.txt files for a website using Firecrawl.
 
 This script:
 1. Maps all URLs from a website using Firecrawl's /map endpoint
-2. Scrapes each URL to get the content
-3. Uses OpenAI to generate titles and descriptions
+2. Scrapes each URL to get the content and metadata
+3. Extracts titles and descriptions from page metadata
 4. Creates llms.txt (list of pages with descriptions) and llms-full.txt (full content)
 """
 
@@ -19,8 +19,8 @@ import re
 from typing import Dict, List, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
-from openai import OpenAI
 from dotenv import load_dotenv
+from url_filtering import PatternValidationService, URLFilteringService, ErrorHandlingService
 
 # Load environment variables from .env file
 load_dotenv()
@@ -34,12 +34,11 @@ logger = logging.getLogger(__name__)
 
 
 class FirecrawlLLMsTextGenerator:
-    """Generate llms.txt files using Firecrawl and OpenAI."""
+    """Generate llms.txt files using Firecrawl."""
     
-    def __init__(self, firecrawl_api_key: str, openai_api_key: str):
-        """Initialize the generator with API keys."""
+    def __init__(self, firecrawl_api_key: str):
+        """Initialize the generator with API key."""
         self.firecrawl_api_key = firecrawl_api_key
-        self.openai_client = OpenAI(api_key=openai_api_key)
         self.firecrawl_base_url = "https://api.firecrawl.dev/v1"
         self.headers = {
             "Authorization": f"Bearer {self.firecrawl_api_key}",
@@ -108,52 +107,51 @@ class FirecrawlLLMsTextGenerator:
             logger.error(f"Error scraping {url}: {e}")
             return None
     
-    def generate_description(self, url: str, markdown: str) -> Tuple[str, str]:
-        """Generate title and description using OpenAI."""
-        logger.debug(f"Generating description for: {url}")
+    def extract_metadata(self, url: str, metadata: Dict) -> Tuple[str, str]:
+        """Extract title and description from page metadata."""
+        logger.debug(f"Extracting metadata for: {url}")
         
-        prompt = f"""Generate a 9-10 word description and a 3-4 word title of the entire page based on ALL the content one will find on the page for this url: {url}. This will help in a user finding the page for its intended purpose.
-
-Return the response in JSON format:
-{{
-    "title": "3-4 word title",
-    "description": "9-10 word description"
-}}"""
+        # Extract title from metadata
+        title = metadata.get("title", "")
+        if not title:
+            # Try alternative title fields
+            title = metadata.get("og:title", "") or metadata.get("twitter:title", "")
         
-        try:
-            response = self.openai_client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a helpful assistant that generates concise titles and descriptions for web pages."
-                    },
-                    {
-                        "role": "user",
-                        "content": f"{prompt}\n\nPage content:\n{markdown[:4000]}"  # Limit content to avoid token limits
-                    }
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.3,
-                max_tokens=100
-            )
-            
-            result = json.loads(response.choices[0].message.content)
-            return result.get("title", "Page"), result.get("description", "No description available")
-            
-        except Exception as e:
-            logger.error(f"Error generating description: {e}")
-            return "Page", "No description available"
+        # Extract description from metadata
+        description = metadata.get("description", "")
+        if not description:
+            # Try alternative description fields
+            description = metadata.get("og:description", "") or metadata.get("twitter:description", "")
+        
+        # Clean up title - remove extra whitespace and limit length
+        if title:
+            title = re.sub(r'\s+', ' ', title.strip())
+            # Limit to reasonable length for display
+            if len(title) > 60:
+                title = title[:57] + "..."
+        else:
+            title = "Page"
+        
+        # Clean up description - remove extra whitespace and limit length
+        if description:
+            description = re.sub(r'\s+', ' ', description.strip())
+            # Limit to reasonable length for display
+            if len(description) > 120:
+                description = description[:117] + "..."
+        else:
+            description = "No description available"
+        
+        return title, description
     
     def process_url(self, url: str, index: int) -> Optional[Dict]:
-        """Process a single URL: scrape and generate description."""
+        """Process a single URL: scrape and extract metadata."""
         scraped_data = self.scrape_url(url)
         if not scraped_data or not scraped_data.get("markdown"):
             return None
         
-        title, description = self.generate_description(
+        title, description = self.extract_metadata(
             url, 
-            scraped_data["markdown"]
+            scraped_data.get("metadata", {})
         )
         
         return {
@@ -183,7 +181,7 @@ Return the response in JSON format:
         
         return result
     
-    def generate_llmstxt(self, url: str, max_urls: int = 100, show_full_text: bool = True) -> Dict[str, str]:
+    def generate_llmstxt(self, url: str, max_urls: int = 100, show_full_text: bool = True, include_patterns: Optional[List[str]] = None) -> Dict[str, str]:
         """Generate llms.txt and llms-full.txt for a website."""
         logger.info(f"Generating llms.txt for {url}")
         
@@ -192,7 +190,37 @@ Return the response in JSON format:
         if not urls:
             raise ValueError("No URLs found for the website")
         
-        # Limit URLs to max_urls
+        # Step 2: Apply regex filtering if patterns provided
+        if include_patterns:
+            logger.info(f"Applying regex filters: {include_patterns}")
+            
+            # Validate all patterns first
+            for pattern in include_patterns:
+                validation_result = PatternValidationService.validate_pattern(pattern)
+                if not validation_result.is_valid:
+                    error_msg = ErrorHandlingService.generate_user_friendly_error(
+                        re.error(validation_result.error_message or "Unknown error"), 
+                        pattern
+                    )
+                    raise ValueError(error_msg)
+            
+            # Filter URLs using multiple patterns
+            try:
+                filtered_set = URLFilteringService.filter_urls_multiple_patterns(urls, include_patterns)
+                urls = filtered_set.filtered_urls
+                
+                logger.info(f"Filtered {filtered_set.filter_count} URLs from {len(filtered_set.original_urls)} discovered URLs")
+                
+                if not urls:
+                    no_matches_msg = ErrorHandlingService.generate_no_matches_message("|".join(include_patterns), len(filtered_set.original_urls))
+                    logger.warning(no_matches_msg)
+                    raise ValueError(no_matches_msg)
+                    
+            except re.error as e:
+                error_msg = ErrorHandlingService.generate_user_friendly_error(e, str(e))
+                raise ValueError(error_msg)
+        
+        # Step 3: Limit URLs to max_urls (after filtering)
         urls = urls[:max_urls]
         
         # Initialize output strings
@@ -249,9 +277,15 @@ Return the response in JSON format:
 def main():
     """Main function to run the script."""
     parser = argparse.ArgumentParser(
-        description="Generate llms.txt and llms-full.txt files for a website using Firecrawl and OpenAI"
+        description="Generate llms.txt and llms-full.txt files for a website using Firecrawl"
     )
     parser.add_argument("url", help="The website URL to process")
+    parser.add_argument(
+        "--include-pattern",
+        type=str,
+        action="append",
+        help="Regex pattern to filter URLs before processing. Can be used multiple times. Only URLs matching any of these patterns will be included in the generated llms.txt files. Examples: '.*/docs/.*' for documentation pages, '.*/blog/.*' for blog posts, '.*/api/.*' for API endpoints."
+    )
     parser.add_argument(
         "--max-urls", 
         type=int, 
@@ -267,11 +301,6 @@ def main():
         "--firecrawl-api-key",
         default=os.getenv("FIRECRAWL_API_KEY"),
         help="Firecrawl API key (default: from FIRECRAWL_API_KEY env var)"
-    )
-    parser.add_argument(
-        "--openai-api-key",
-        default=os.getenv("OPENAI_API_KEY"),
-        help="OpenAI API key (default: from OPENAI_API_KEY env var)"
     )
     parser.add_argument(
         "--no-full-text",
@@ -290,27 +319,21 @@ def main():
     if args.verbose:
         logger.setLevel(logging.DEBUG)
     
-    # Validate API keys
+    # Validate API key
     if not args.firecrawl_api_key:
         logger.error("Firecrawl API key not provided. Set FIRECRAWL_API_KEY environment variable or use --firecrawl-api-key")
         sys.exit(1)
     
-    if not args.openai_api_key:
-        logger.error("OpenAI API key not provided. Set OPENAI_API_KEY environment variable or use --openai-api-key")
-        sys.exit(1)
-    
     # Create generator
-    generator = FirecrawlLLMsTextGenerator(
-        args.firecrawl_api_key,
-        args.openai_api_key
-    )
+    generator = FirecrawlLLMsTextGenerator(args.firecrawl_api_key)
     
     try:
         # Generate llms.txt files
         result = generator.generate_llmstxt(
             args.url,
             args.max_urls,
-            not args.no_full_text
+            not args.no_full_text,
+            args.include_pattern
         )
         
         # Create output directory if it doesn't exist

@@ -1,0 +1,78 @@
+# Firecrawl LLMs.txt Generator - Cursor Rules
+
+## Project Overview
+This is a Python project that generates `llms.txt` and `llms-full.txt` files for websites using Firecrawl API and metadata extraction (no OpenAI required).
+
+## Key Features
+- Multiple `--include-pattern` arguments support (OR logic)
+- Metadata extraction from page HTML (title, og:title, twitter:title, description, og:description, twitter:description)
+- No external AI dependencies
+- Comprehensive test coverage (79 tests)
+
+## Testing Commands
+
+### Run All Tests
+```bash
+python -m pytest tests/ -v
+```
+
+### Run Specific Test Categories
+```bash
+# Unit tests only
+python -m pytest tests/unit/ -v
+
+# Integration tests only  
+python -m pytest tests/integration/ -v
+
+# Contract tests only
+python -m pytest tests/contract/ -v
+```
+
+### Run Tests with Coverage
+```bash
+python -m pytest tests/ --cov=. --cov-report=html
+```
+
+### Run Specific Test File
+```bash
+python -m pytest tests/unit/test_url_filtering.py -v
+```
+
+### Run Specific Test
+```bash
+python -m pytest tests/unit/test_url_filtering.py::TestURLFilteringService::test_filter_urls_basic_patterns -v
+```
+
+## Test Structure
+- **Unit Tests** (`tests/unit/`): Individual component tests
+- **Integration Tests** (`tests/integration/`): Component interaction tests
+- **Contract Tests** (`tests/contract/`): API contract and data structure tests
+
+## Important Notes
+- All tests must pass before merging code
+- The project uses `pytest` with configuration in `pytest.ini`
+- Tests cover URL filtering, pattern validation, CLI integration, and error handling
+- Integration tests verify CLI argument parsing and execution
+- Contract tests ensure API consistency and data flow
+
+## CLI Usage
+```bash
+# Basic usage
+python generate-llmstxt.py https://example.com
+
+# Multiple patterns
+python generate-llmstxt.py https://example.com \
+  --include-pattern ".*/docs/.*" \
+  --include-pattern ".*/blog/.*" \
+  --max-urls 50
+
+# With API key
+python generate-llmstxt.py https://example.com --firecrawl-api-key "fc-..."
+```
+
+## File Structure
+- `generate-llmstxt.py`: Main script
+- `url_filtering.py`: URL filtering and pattern validation services
+- `tests/`: Comprehensive test suite
+- `requirements.txt`: Dependencies (no OpenAI)
+- `pytest.ini`: Test configuration

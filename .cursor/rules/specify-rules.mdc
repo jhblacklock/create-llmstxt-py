@@ -1,0 +1,24 @@
+# create-llmstxt-py Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2025-10-07
+
+## Active Technologies
+- Python 3.7+ (existing project requirement) + requests, openai, python-dotenv (existing), re (built-in regex module) (001-add-another-option)
+
+## Project Structure
+```
+src/
+tests/
+```
+
+## Commands
+cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] pytest [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] ruff check .
+
+## Code Style
+Python 3.7+ (existing project requirement): Follow standard conventions
+
+## Recent Changes
+- 001-add-another-option: Added Python 3.7+ (existing project requirement) + requests, openai, python-dotenv (existing), re (built-in regex module)
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->
