@@ -22,7 +22,6 @@ class TestEndToEndWorkflow:
                     "--include-pattern", ".*/docs/.*",
                     "--max-urls", "10",
                     "--output-dir", temp_dir,
-                    "--firecrawl-api-key", "test-key"
                 ],
                 capture_output=True,
                 text=True,
@@ -42,7 +41,6 @@ class TestEndToEndWorkflow:
                     "https://example.com",
                     "--max-urls", "5",
                     "--output-dir", temp_dir,
-                    "--firecrawl-api-key", "test-key"
                 ],
                 capture_output=True,
                 text=True,
@@ -63,7 +61,6 @@ class TestEndToEndWorkflow:
                     "--include-pattern", ".*/nonexistent/.*",
                     "--max-urls", "10",
                     "--output-dir", temp_dir,
-                    "--firecrawl-api-key", "test-key"
                 ],
                 capture_output=True,
                 text=True,
@@ -83,7 +80,6 @@ class TestEndToEndWorkflow:
                     "https://example.com",
                     "--include-pattern", "[invalid",
                     "--output-dir", temp_dir,
-                    "--firecrawl-api-key", "test-key"
                 ],
                 capture_output=True,
                 text=True,
@@ -106,7 +102,6 @@ class TestEndToEndWorkflow:
                     "--output-dir", temp_dir,
                     "--no-full-text",
                     "--verbose",
-                    "--firecrawl-api-key", "test-key"
                 ],
                 capture_output=True,
                 text=True,
@@ -127,7 +122,6 @@ class TestEndToEndWorkflow:
                     "--include-pattern", ".*/page[0-9]+$",
                     "--max-urls", "1000",
                     "--output-dir", temp_dir,
-                    "--firecrawl-api-key", "test-key"
                 ],
                 capture_output=True,
                 text=True,
@@ -148,7 +142,6 @@ class TestEndToEndWorkflow:
                     "--include-pattern", ".*/docs/.*",
                     "--max-urls", "10",
                     "--output-dir", temp_dir,
-                    "--firecrawl-api-key", "invalid-key"
                 ],
                 capture_output=True,
                 text=True,

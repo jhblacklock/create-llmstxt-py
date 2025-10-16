@@ -32,7 +32,6 @@ class TestCLIIntegration:
                 "https://example.com",
                 "--include-pattern", ".*/docs/.*",
                 "--max-urls", "10",
-                "--firecrawl-api-key", "test-key"
             ],
             capture_output=True,
             text=True,
@@ -50,7 +49,6 @@ class TestCLIIntegration:
                 sys.executable, "generate-llmstxt.py",
                 "https://example.com",
                 "--max-urls", "10",
-                "--firecrawl-api-key", "test-key"
             ],
             capture_output=True,
             text=True,
@@ -68,7 +66,6 @@ class TestCLIIntegration:
                 sys.executable, "generate-llmstxt.py",
                 "https://example.com",
                 "--include-pattern", "[invalid",
-                "--firecrawl-api-key", "test-key"
             ],
             capture_output=True,
             text=True,
@@ -86,7 +83,6 @@ class TestCLIIntegration:
                 sys.executable, "generate-llmstxt.py",
                 "https://example.com",
                 "--include-pattern", "",
-                "--firecrawl-api-key", "test-key"
             ],
             capture_output=True,
             text=True,
@@ -108,7 +104,6 @@ class TestCLIIntegration:
                 "--max-urls", "50",
                 "--output-dir", "/tmp",
                 "--verbose",
-                "--firecrawl-api-key", "test-key"
             ],
             capture_output=True,
             text=True,
@@ -128,7 +123,6 @@ class TestCLIIntegration:
                 sys.executable, "generate-llmstxt.py",
                 "https://example.com",
                 "--include-pattern", special_pattern,
-                "--firecrawl-api-key", "test-key"
             ],
             capture_output=True,
             text=True,

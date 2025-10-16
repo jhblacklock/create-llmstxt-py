@@ -20,7 +20,6 @@ class TestOptionCombinations:
                     "--include-pattern", ".*/docs/.*",
                     "--max-urls", "50",
                     "--output-dir", temp_dir,
-                    "--firecrawl-api-key", "test-key"
                 ],
                 capture_output=True,
                 text=True,
@@ -40,7 +39,6 @@ class TestOptionCombinations:
                     "https://example.com",
                     "--include-pattern", ".*/blog/.*",
                     "--output-dir", temp_dir,
-                    "--firecrawl-api-key", "test-key"
                 ],
                 capture_output=True,
                 text=True,
@@ -61,7 +59,6 @@ class TestOptionCombinations:
                     "--include-pattern", ".*/api/.*",
                     "--verbose",
                     "--output-dir", temp_dir,
-                    "--firecrawl-api-key", "test-key"
                 ],
                 capture_output=True,
                 text=True,
@@ -82,7 +79,6 @@ class TestOptionCombinations:
                     "--include-pattern", ".*/docs/.*",
                     "--no-full-text",
                     "--output-dir", temp_dir,
-                    "--firecrawl-api-key", "test-key"
                 ],
                 capture_output=True,
                 text=True,
@@ -105,7 +101,6 @@ class TestOptionCombinations:
                     "--output-dir", temp_dir,
                     "--no-full-text",
                     "--verbose",
-                    "--firecrawl-api-key", "test-key"
                 ],
                 capture_output=True,
                 text=True,
@@ -125,7 +120,6 @@ class TestOptionCombinations:
                     "https://example.com",
                     "--include-pattern", ".*/docs/.*",
                     "--output-dir", temp_dir,
-                    "--firecrawl-api-key", "test-key"
                 ],
                 capture_output=True,
                 text=True,
@@ -146,7 +140,6 @@ class TestOptionCombinations:
                     "--include-pattern", ".*/docs/.*",
                     "--max-urls", "2",
                     "--output-dir", temp_dir,
-                    "--firecrawl-api-key", "test-key"
                 ],
                 capture_output=True,
                 text=True,
@@ -166,7 +159,6 @@ class TestOptionCombinations:
                     "https://example.com",
                     "--max-urls", "10",
                     "--output-dir", temp_dir,
-                    "--firecrawl-api-key", "test-key"
                 ],
                 capture_output=True,
                 text=True,
@@ -188,7 +180,6 @@ class TestOptionCombinations:
                     "--max-urls", "50",
                     "--output-dir", temp_dir,
                     "--verbose",
-                    "--firecrawl-api-key", "test-key"
                 ],
                 capture_output=True,
                 text=True,
@@ -198,3 +189,61 @@ class TestOptionCombinations:
             # Should fail due to invalid pattern
             assert result.returncode == 1
             assert "Invalid regex pattern" in result.stderr or "Error" in result.stderr
+    
+    def test_no_summary_option(self):
+        """Test --no-summary option generates only llms-full.txt."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result = subprocess.run(
+                [
+                    sys.executable, "generate-llmstxt.py",
+                    "https://example.com",
+                    "--no-summary",
+                    "--output-dir", temp_dir,
+                ],
+                capture_output=True,
+                text=True,
+                cwd=os.path.dirname(os.path.abspath(__file__ + "/../../"))
+            )
+            
+            # Should fail due to API key but not due to argument parsing
+            assert result.returncode == 1
+            assert "No URLs found" in result.stderr or "Error" in result.stderr
+    
+    def test_no_full_text_option(self):
+        """Test --no-full-text option generates only llms.txt."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result = subprocess.run(
+                [
+                    sys.executable, "generate-llmstxt.py",
+                    "https://example.com",
+                    "--no-full-text",
+                    "--output-dir", temp_dir,
+                ],
+                capture_output=True,
+                text=True,
+                cwd=os.path.dirname(os.path.abspath(__file__ + "/../../"))
+            )
+            
+            # Should fail due to API key but not due to argument parsing
+            assert result.returncode == 1
+            assert "No URLs found" in result.stderr or "Error" in result.stderr
+    
+    def test_both_no_options_error(self):
+        """Test that using both --no-full-text and --no-summary causes an error."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result = subprocess.run(
+                [
+                    sys.executable, "generate-llmstxt.py",
+                    "https://example.com",
+                    "--no-full-text",
+                    "--no-summary",
+                    "--output-dir", temp_dir,
+                ],
+                capture_output=True,
+                text=True,
+                cwd=os.path.dirname(os.path.abspath(__file__ + "/../../"))
+            )
+            
+            # Should fail due to both options being used
+            assert result.returncode == 1
+            assert "Cannot use both --no-full-text and --no-summary" in result.stderr

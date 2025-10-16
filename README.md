@@ -1,6 +1,6 @@
-# Firecrawl LLMs.txt Generator
+# Simple LLMs.txt Generator
 
-A Python script that generates `llms.txt` and `llms-full.txt` files for any website using Firecrawl API and page metadata extraction.
+A Python script that generates `llms.txt` and `llms-full.txt` files for any website using requests + BeautifulSoup + html2text.
 
 ## Quick Start
 
@@ -8,10 +8,7 @@ A Python script that generates `llms.txt` and `llms-full.txt` files for any webs
 # Install dependencies
 pip install -r requirements.txt
 
-# Set up API key
-echo "FIRECRAWL_API_KEY=your-key" > .env
-
-# Generate llms.txt files
+# Generate llms.txt files (no API key needed!)
 python generate-llmstxt.py https://example.com
 
 # Run tests
@@ -27,19 +24,19 @@ python run_tests.py all
 
 ## Features
 
-- 🗺️ **Website Mapping**: Automatically discovers all URLs on a website using Firecrawl's map endpoint
-- 📄 **Content Scraping**: Extracts markdown content from each page
+- 🗺️ **Website Mapping**: Automatically discovers all URLs on a website using simple web crawling
+- 📄 **Content Scraping**: Extracts markdown content from each page using html2text
 - 📝 **Metadata Extraction**: Pulls titles and descriptions from page metadata (title, og:title, twitter:title, description, og:description, twitter:description)
 - ⚡ **Parallel Processing**: Processes multiple URLs concurrently for faster generation
 - 🎯 **Configurable Limits**: Set maximum number of URLs to process
 - 📁 **Flexible Output**: Choose to generate both files or just llms.txt
 - 🔍 **URL Filtering**: Filter URLs using multiple regex patterns to create focused llms.txt files
-- 🚀 **No External AI Dependencies**: Uses page metadata instead of requiring OpenAI API
+- 🚀 **No External Dependencies**: Uses requests + BeautifulSoup + html2text (all free, open-source)
 
 ## Prerequisites
 
 - Python 3.7+
-- Firecrawl API key ([Get one here](https://firecrawl.dev))
+- No API key required! (Uses free, open-source libraries)
 
 ## Installation
 
@@ -56,22 +53,7 @@ cd <repository-directory>
 pip install -r requirements.txt
 ```
 
-3. Set up API key (choose one method):
-
-   **Option A: Using .env file (recommended)**
-
-   ```bash
-   echo "FIRECRAWL_API_KEY=your-firecrawl-api-key" > .env
-   ```
-
-   **Option B: Using environment variables**
-
-   ```bash
-   export FIRECRAWL_API_KEY="your-firecrawl-api-key"
-   ```
-
-   **Option C: Using command line arguments**
-   (See usage examples below)
+3. That's it! No API key setup required.
 
 ## Usage
 
