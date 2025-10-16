@@ -1,84 +1,92 @@
 #!/usr/bin/env python3
-"""
-Quick test runner script for the Firecrawl LLMs.txt Generator project.
+"""Run the TrueCar scripts and verify they work."""
 
-This script provides convenient commands to run different types of tests.
-"""
-
-import subprocess
+import os
 import sys
-import argparse
+import subprocess
+from pathlib import Path
 
-
-def run_command(cmd, description):
-    """Run a command and print the result."""
+def run_script(script_name, description):
+    """Run a script and return success status."""
     print(f"\n{'='*60}")
     print(f"Running: {description}")
-    print(f"Command: {' '.join(cmd)}")
+    print(f"Script: {script_name}")
     print(f"{'='*60}")
     
-    result = subprocess.run(cmd, capture_output=False)
-    return result.returncode == 0
-
+    try:
+        # Make sure the script is executable
+        script_path = Path(script_name)
+        if script_path.exists():
+            os.chmod(script_path, 0o755)
+        
+        # Run the script
+        result = subprocess.run(
+            [script_name],
+            cwd=Path(__file__).parent,
+            capture_output=True,
+            text=True,
+            timeout=300  # 5 minute timeout
+        )
+        
+        print(f"Return code: {result.returncode}")
+        if result.stdout:
+            print("STDOUT:")
+            print(result.stdout)
+        if result.stderr:
+            print("STDERR:")
+            print(result.stderr)
+        
+        return result.returncode == 0
+        
+    except subprocess.TimeoutExpired:
+        print("❌ Script timed out after 5 minutes")
+        return False
+    except Exception as e:
+        print(f"❌ Error running script: {e}")
+        return False
 
 def main():
-    parser = argparse.ArgumentParser(description="Run tests for Firecrawl LLMs.txt Generator")
-    parser.add_argument(
-        "test_type",
-        choices=["all", "unit", "integration", "contract", "quick"],
-        help="Type of tests to run"
-    )
-    parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Run with verbose output"
-    )
-    parser.add_argument(
-        "--coverage", "-c",
-        action="store_true",
-        help="Run with coverage reporting"
-    )
+    """Run both TrueCar scripts."""
+    print("🚀 Testing TrueCar CSV Processing Scripts")
+    print("=" * 60)
     
-    args = parser.parse_args()
+    # Test scripts
+    scripts = [
+        ("bin/truecar-llms-summary", "TrueCar LLMs.txt Generator (Summary)"),
+        ("bin/truecar-llms-full", "TrueCar LLMs-full.txt Generator (Full)")
+    ]
     
-    # Base pytest command
-    base_cmd = ["python", "-m", "pytest"]
+    results = []
     
-    if args.verbose:
-        base_cmd.append("-v")
-    
-    if args.coverage:
-        base_cmd.extend(["--cov=.", "--cov-report=html"])
-    
-    success = True
-    
-    if args.test_type == "all":
-        success = run_command(base_cmd + ["tests/"], "All Tests")
+    for script, description in scripts:
+        success = run_script(script, description)
+        results.append((script, success))
         
-    elif args.test_type == "unit":
-        success = run_command(base_cmd + ["tests/unit/"], "Unit Tests")
-        
-    elif args.test_type == "integration":
-        success = run_command(base_cmd + ["tests/integration/"], "Integration Tests")
-        
-    elif args.test_type == "contract":
-        success = run_command(base_cmd + ["tests/contract/"], "Contract Tests")
-        
-    elif args.test_type == "quick":
-        # Run a subset of critical tests quickly
-        success = run_command(base_cmd + [
-            "tests/unit/test_url_filtering.py",
-            "tests/unit/test_pattern_validation.py",
-            "tests/integration/test_cli_integration.py"
-        ], "Quick Tests (Critical Path)")
+        if success:
+            print(f"✅ {description} completed successfully!")
+        else:
+            print(f"❌ {description} failed!")
     
-    if success:
-        print(f"\n✅ {args.test_type.title()} tests passed!")
+    # Summary
+    print(f"\n{'='*60}")
+    print("📊 SUMMARY")
+    print(f"{'='*60}")
+    
+    passed = sum(1 for _, success in results if success)
+    total = len(results)
+    
+    for script, success in results:
+        status = "✅ PASS" if success else "❌ FAIL"
+        print(f"{status} {script}")
+    
+    print(f"\nOverall: {passed}/{total} scripts passed")
+    
+    if passed == total:
+        print("🎉 All scripts completed successfully!")
         return 0
     else:
-        print(f"\n❌ {args.test_type.title()} tests failed!")
+        print("💥 Some scripts failed. Check the output above for details.")
         return 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

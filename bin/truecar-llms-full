@@ -1,0 +1,138 @@
+#!/bin/bash
+
+# TrueCar LLMs-full.txt Generator Script
+# This script generates llms-full.txt from urls/llms_full_urls.yaml
+# Usage: ./bin/truecar-llms-full [--resume] [--force-fresh]
+
+set -e  # Exit on any error
+
+# Parse command line arguments
+RESUME_MODE=false
+FORCE_FRESH=false
+for arg in "$@"; do
+    case $arg in
+        --resume)
+            RESUME_MODE=true
+            ;;
+        --force-fresh)
+            FORCE_FRESH=true
+            ;;
+        --help|-h)
+            echo "Usage: $0 [--resume] [--force-fresh]"
+            echo ""
+            echo "Options:"
+            echo "  --resume       Resume from where you left off (auto-detected if not specified)"
+            echo "  --force-fresh  Force a fresh start, ignoring existing progress"
+            echo "  --help, -h     Show this help message"
+            exit 0
+            ;;
+    esac
+done
+
+# Create output directory
+mkdir -p out
+
+# Auto-detect if resume is needed (unless force-fresh is specified)
+if [ "$FORCE_FRESH" = false ] && [ -f "./out/truecar.com-llms-full.txt" ]; then
+    # Count current progress (count page separators)
+    CURRENT_COUNT=$(grep -c "<|firecrawl-page-" ./out/truecar.com-llms-full.txt || echo "0")
+    TOTAL_COUNT=$(grep -c "  - https://" urls/llms_full_urls.yaml || echo "0")
+    
+    if [ $CURRENT_COUNT -gt 0 ] && [ $CURRENT_COUNT -lt $TOTAL_COUNT ]; then
+        echo "🔄 Resume Mode: Continuing from where you left off..."
+        echo "=================================================="
+        echo "📊 Current Progress:"
+        echo "   ✅ Processed: $CURRENT_COUNT URLs"
+        echo "   📋 Total: $TOTAL_COUNT URLs"
+        echo "   🔄 Remaining: $((TOTAL_COUNT - CURRENT_COUNT)) URLs"
+        echo ""
+        
+        # Ask user if they want to resume
+        read -p "🚀 Do you want to resume processing? (Y/n): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Nn]$ ]]; then
+            echo "🆕 Starting fresh instead..."
+            RESUME_MODE=false
+        else
+            RESUME_MODE=true
+        fi
+    elif [ $CURRENT_COUNT -eq $TOTAL_COUNT ]; then
+        echo "🎉 All URLs have already been processed!"
+        echo "📊 Final Progress: $CURRENT_COUNT/$TOTAL_COUNT URLs completed"
+        echo "💡 Use --force-fresh to start over"
+        exit 0
+    else
+        echo "🆕 Fresh Start: Processing all URLs..."
+        echo "====================================="
+        RESUME_MODE=false
+    fi
+elif [ "$RESUME_MODE" = true ]; then
+    echo "🔄 Resume Mode: Continuing from where you left off..."
+    echo "=================================================="
+    
+    # Check if we have existing files
+    if [ ! -f "./out/truecar.com-llms-full.txt" ]; then
+        echo "❌ No existing llms-full.txt file found in ./out/"
+        echo "💡 Starting fresh instead..."
+        RESUME_MODE=false
+    else
+        # Count current progress (count page separators)
+        CURRENT_COUNT=$(grep -c "<|firecrawl-page-" ./out/truecar.com-llms-full.txt || echo "0")
+        TOTAL_COUNT=$(grep -c "  - https://" urls/llms_full_urls.yaml || echo "0")
+        
+        echo "📊 Current Progress:"
+        echo "   ✅ Processed: $CURRENT_COUNT URLs"
+        echo "   📋 Total: $TOTAL_COUNT URLs"
+        echo "   🔄 Remaining: $((TOTAL_COUNT - CURRENT_COUNT)) URLs"
+        
+        if [ $CURRENT_COUNT -eq $TOTAL_COUNT ]; then
+            echo "🎉 All URLs have already been processed!"
+            exit 0
+        fi
+    fi
+else
+    echo "🆕 Fresh Start: Processing all URLs..."
+    echo "====================================="
+fi
+
+if [ "$RESUME_MODE" = true ]; then
+    # Create resume file with remaining URLs
+    echo "📝 Creating resume file..."
+    python resume_llmstxt.py \
+      --input-file urls/llms_full_urls.yaml \
+      --llmstxt-file ./out/truecar.com-llms-full.txt \
+      --output-file urls/llms_full_urls_resume.yaml
+    
+    # Use resume file
+    URL_FILE="urls/llms_full_urls_resume.yaml"
+    MAX_URLS=$((TOTAL_COUNT - CURRENT_COUNT))
+else
+    URL_FILE="urls/llms_full_urls.yaml"
+    MAX_URLS=""
+fi
+
+# Run with appropriate file pattern
+echo "📋 Generating llms-full.txt from $URL_FILE..."
+if [ -n "$MAX_URLS" ]; then
+    python generate-llmstxt.py https://www.truecar.com \
+      --file-pattern "$URL_FILE" \
+      --output-dir ./out \
+      --no-summary \
+      --max-urls "$MAX_URLS" \
+      --verbose
+else
+    python generate-llmstxt.py https://www.truecar.com \
+      --file-pattern "$URL_FILE" \
+      --output-dir ./out \
+      --no-summary \
+      --verbose
+fi
+
+echo "✅ llms-full.txt generation completed!"
+echo "📁 Output file saved to: ./out/truecar.com-llms-full.txt"
+
+# Clean up resume file if it was created
+if [ -f "urls/llms_full_urls_resume.yaml" ]; then
+    rm urls/llms_full_urls_resume.yaml
+    echo "🧹 Cleaned up temporary resume file"
+fi
